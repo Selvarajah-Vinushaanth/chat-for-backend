@@ -357,7 +357,20 @@ def delete_group(group_name):
         if 'created_by' in group and group['created_by'] != username:
             return jsonify({"error": "You can only delete groups you created"}), 403
 
-        # Delete the group
+        # First, delete all messages associated with this group
+        try:
+            # Using direct API call to delete messages with this group name
+            message_delete_response = requests.delete(
+                f"{SUPABASE_URL}/rest/v1/messages?group_name=eq.{group_name}",
+                headers=SUPABASE_HEADERS
+            )
+            
+            if message_delete_response.status_code != 204:
+                print(f"Warning: Could not delete messages for group {group_name}. Status code: {message_delete_response.status_code}")
+        except Exception as msg_error:
+            print(f"Error deleting messages for group {group_name}: {str(msg_error)}")
+
+        # Now delete the group
         delete_response = supabase.table('groups').delete().eq('name', group_name).execute()
         
         if delete_response and hasattr(delete_response, 'data') and delete_response.data:
